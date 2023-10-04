@@ -27,7 +27,7 @@ def find_best_attribute(examples):
   for ex in examples:
     for attribute in all_attributes:
       possible_attribute_outcome = ex[attribute]
-      if possible_attribute_outcome != "?":
+      if possible_attribute_outcome != '?':
         class_outcome = ex["Class"]
         if class_outcome not in entropy_dict[attribute][possible_attribute_outcome]:
           entropy_dict[attribute][possible_attribute_outcome][class_outcome] = 1
@@ -58,7 +58,7 @@ def find_best_attribute(examples):
       minimum = current_attribute_entropy
       res = attribute
   
-  return [res, minimum]
+  return [res, minimum, entropy_dict[res]]
 
 
 def ID3(examples, default):
@@ -71,6 +71,7 @@ def ID3(examples, default):
   
   currNode = Node()
   currNode.label = default
+  entropy_dict_res = {}
   
   # shouldnt hit this case
   if not examples:
@@ -83,19 +84,36 @@ def ID3(examples, default):
       occurencePerClass[ex["Class"]] = 0
     occurencePerClass[ex["Class"]] += 1
   
-  currNode.label = list(occurencePerClass.keys())[0]
+  mostCommon = list(occurencePerClass.keys()).sort()[-1]
+  currNode.label = mostCommon
 
   if len(occurencePerClass) == 1 and len(examples[0].keys() < 2):
     return currNode
   
   parent_entropy = entropy(examples)
-  best_attribute, child_entropy = find_best_attribute(examples)
+  best_attribute, child_entropy, entropy_dict_res = find_best_attribute(examples)
 
   currNode.entropy = parent_entropy - child_entropy
   currNode.splitting_attribute = best_attribute
 
   #do this for all children, remove from examples the rows with splitting attribute = best attribute
   #will need to loop for this, and recursive call each time
+  #entropy_dict_res should be equal to {Thai : dict, Mexican : dict, Italian : dict}
+  for single_attribute_value in entropy_dict_res:
+    #single_attribute_value should be equal to Thai:{Yes: 3, No: 4}
+    currNode.children[single_attribute_value] = Node()
+    #trying to say if no one ever had thai food, this may be wrong
+    if len(entropy_dict_res[single_attribute_value]) == 0:
+      currNode.children[single_attribute_value].label = default
+    else:
+
+      ######LOOK AT THIS######
+      new_data_set = examples.map(examples[best_attribute]==single_attribute_value)
+      currNode.children[single_attribute_value] = ID3(new_data_set, default)
+    #if no one has the single_attribute_value then make Nodes label mostCommon
+    #else call Node = ID3(D/D_a, default)
+
+  return currNode
   
 
 def prune(node, examples):
