@@ -3,4 +3,6 @@ class Node:
     self.label = None
     self.children = {}
     self.entropy = None
+    self.splitting_attribute = None
+    
     
