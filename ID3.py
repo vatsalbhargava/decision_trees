@@ -139,14 +139,58 @@ def prune(node, examples):
   Takes in a trained tree and a validation set of examples.  Prunes nodes in order
   to improve accuracy on the validation data; the precise pruning strategy is up to you.
   '''
-  print(node)
+  if not node.children:
+      return node
+  
+  # Step 1: Prune subtrees
+  for value, child_node in node.children.items():
+      node.children[value] = prune(child_node, examples)
+  
+  # Step 2: Check accuracy before pruning
+  initial_accuracy = test(node, examples)
+  
+  # Store the original children and splitting attribute
+  original_children = node.children
+  original_splitting_attribute = node.splitting_attribute
+  
+  # Temporarily turn node into a leaf node with the most common class label
+  node.children = {}
+  node.splitting_attribute = None
+  
+  # Find the most common class label in the examples
+  class_counts = {}
+  for example in examples:
+      class_label = example['Class']
+      class_counts[class_label] = class_counts.get(class_label, 0) + 1
+  most_common_class = max(class_counts, key=class_counts.get)
+  node.label = most_common_class
+  
+  # Step 3: Check accuracy after pruning
+  pruned_accuracy = test(node, examples)
+  
+  # Step 4: Decide whether to keep the pruning
+  if pruned_accuracy >= initial_accuracy:
+      # Pruning improved or maintained accuracy, keep it
+      return node
+  else:
+      # Pruning reduced accuracy, revert changes
+      node.children = original_children
+      node.splitting_attribute = original_splitting_attribute
+      return node
 
 def test(node, examples):
   '''
   Takes in a trained tree and a test set of examples.  Returns the accuracy (fraction
   of examples the tree classifies correctly).
   '''
-  print(node)
+  correct = 0
+  total = 0
+  for ex in examples:
+    total += 1
+    if evaluate(node, ex) == ex["Class"]:
+      correct += 1
+      
+  return correct/total
 
 def evaluate(node, example):
   '''
