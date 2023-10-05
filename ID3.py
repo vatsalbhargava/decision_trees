@@ -20,10 +20,10 @@ def entropy(examples):
     
   return res
 
-def find_best_attribute(examples):
+def find_best_attribute(examples, ignore_attributes):
   #dict = {all attributes : {all attribute outcomes : {all class outcomes : count}}}
   entropy_dict = {}
-  all_attributes = set(examples[0].keys())
+  all_attributes = set(examples[0].keys()) - set(ignore_attributes)
   all_attributes.remove("Class")
 
   #first, build a dict, keys are all attributes, set equal to {} initially
@@ -107,8 +107,8 @@ def ID3(examples, default):
     return currNode
   
   parent_entropy = entropy(examples)
-  best_attribute, child_entropy, entropy_dict_res = find_best_attribute(examples)
-
+  best_attribute, child_entropy, entropy_dict_res = find_best_attribute(examples, currNode.ignore_attributes)
+  currNode.ignore_attributes.append(best_attribute)
   currNode.entropy = parent_entropy - child_entropy
   currNode.splitting_attribute = best_attribute
 
@@ -120,7 +120,7 @@ def ID3(examples, default):
     currNode.children[single_attribute_value] = Node()
     #trying to say if no one ever had thai food, this may be wrong
     if len(entropy_dict_res[single_attribute_value]) == 0:
-      currNode.children[single_attribute_value].label = default #maybe most common
+      currNode.children[single_attribute_value].label = mostCommon #maybe most common
     else:
       ######LOOK AT THIS######
       new_data_set = [example for example in examples if example[best_attribute] == single_attribute_value]
@@ -128,6 +128,8 @@ def ID3(examples, default):
         currNode.children[single_attribute_value].label = mostCommon
       else:
         currNode.children[single_attribute_value] = ID3(new_data_set, default)
+        currNode.children[single_attribute_value].ignore_attributes = currNode.ignore_attributes
+
     #if no one has the single_attribute_value then make Nodes label mostCommon
     #else call Node = ID3(D/D_a, default)
 
@@ -139,44 +141,28 @@ def prune(node, examples):
   Takes in a trained tree and a validation set of examples.  Prunes nodes in order
   to improve accuracy on the validation data; the precise pruning strategy is up to you.
   '''
-  if not node.children:
+  if not node.children:  # if it's a leaf node, nothing to prune
       return node
-  
-  # Step 1: Prune subtrees
-  for value, child_node in node.children.items():
-      node.children[value] = prune(child_node, examples)
-  
-  # Step 2: Check accuracy before pruning
-  initial_accuracy = test(node, examples)
-  
-  # Store the original children and splitting attribute
+
+  # First, prune subtrees
+  for value, child in node.children.items():
+      node.children[value] = prune(child, examples)
+
+  # Temporarily prune the current node
   original_children = node.children
-  original_splitting_attribute = node.splitting_attribute
-  
-  # Temporarily turn node into a leaf node with the most common class label
-  node.children = {}
-  node.splitting_attribute = None
-  
-  # Find the most common class label in the examples
-  class_counts = {}
-  for example in examples:
-      class_label = example['Class']
-      class_counts[class_label] = class_counts.get(class_label, 0) + 1
-  most_common_class = max(class_counts, key=class_counts.get)
-  node.label = most_common_class
-  
-  # Step 3: Check accuracy after pruning
+  node.children = {}  # temporarily prune the subtree
+
+  # Check accuracy before and after pruning
   pruned_accuracy = test(node, examples)
-  
-  # Step 4: Decide whether to keep the pruning
-  if pruned_accuracy >= initial_accuracy:
-      # Pruning improved or maintained accuracy, keep it
+  node.children = original_children  # restore original subtree
+  original_accuracy = test(node, examples)
+
+  # Decide whether to keep the pruning
+  if pruned_accuracy >= original_accuracy:
+      node.children = {}  # keep the pruning
       return node
   else:
-      # Pruning reduced accuracy, revert changes
-      node.children = original_children
-      node.splitting_attribute = original_splitting_attribute
-      return node
+      return node  # keep the original subtree
 
 def test(node, examples):
   '''
