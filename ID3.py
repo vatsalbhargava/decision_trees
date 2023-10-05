@@ -2,7 +2,23 @@ from node import Node
 import math
 
 def entropy(examples):
-  return examples
+  if not examples:
+    return 0
+  
+  count = {}
+  res = 0
+  tc = 0
+  for ex in examples:
+    if ex["Class"] not in count:
+      count[ex["Class"]] = 0
+
+    tc += 1
+    count[ex["Class"]] += 1
+    
+  for val in count:
+    res += -1*((count[val]/tc)*math.log(count[val]/tc,2))
+    
+  return res
 
 def find_best_attribute(examples):
   #dict = {all attributes : {all attribute outcomes : {all class outcomes : count}}}
@@ -84,10 +100,10 @@ def ID3(examples, default):
       occurencePerClass[ex["Class"]] = 0
     occurencePerClass[ex["Class"]] += 1
   
-  mostCommon = list(occurencePerClass.keys()).sort()[-1]
+  mostCommon = sorted(list(occurencePerClass.keys()))[-1]
   currNode.label = mostCommon
 
-  if len(occurencePerClass) == 1 and len(examples[0].keys() < 2):
+  if len(occurencePerClass) == 1:
     return currNode
   
   parent_entropy = entropy(examples)
@@ -104,12 +120,14 @@ def ID3(examples, default):
     currNode.children[single_attribute_value] = Node()
     #trying to say if no one ever had thai food, this may be wrong
     if len(entropy_dict_res[single_attribute_value]) == 0:
-      currNode.children[single_attribute_value].label = default
+      currNode.children[single_attribute_value].label = default #maybe most common
     else:
-
       ######LOOK AT THIS######
-      new_data_set = examples.map(examples[best_attribute]==single_attribute_value)
-      currNode.children[single_attribute_value] = ID3(new_data_set, default)
+      new_data_set = [example for example in examples if example[best_attribute] == single_attribute_value]
+      if len(new_data_set) == 0:
+        currNode.children[single_attribute_value].label = mostCommon
+      else:
+        currNode.children[single_attribute_value] = ID3(new_data_set, default)
     #if no one has the single_attribute_value then make Nodes label mostCommon
     #else call Node = ID3(D/D_a, default)
 
@@ -146,4 +164,3 @@ def evaluate(node, example):
 
   return node.label
 
-#this assumes that node.children is gonna be a dict of attribute values (thai, mexican, etc) to further nodes
