@@ -109,7 +109,7 @@ def ID3(examples, default):
   parent_entropy = entropy(examples)
   best_attribute, child_entropy, entropy_dict_res = find_best_attribute(examples, currNode.ignore_attributes)
   currNode.ignore_attributes.append(best_attribute)
-  currNode.entropy = parent_entropy - child_entropy
+
   currNode.splitting_attribute = best_attribute
 
   #do this for all children, remove from examples the rows with splitting attribute = best attribute
