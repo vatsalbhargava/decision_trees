@@ -25,7 +25,6 @@ def find_best_attribute(examples, ignore_attributes):
   entropy_dict = {}
   all_attributes = set(examples[0].keys()) - set(ignore_attributes)
   all_attributes.remove("Class")
-
   #first, build a dict, keys are all attributes, set equal to {} initially
   for attribute in all_attributes:
     entropy_dict[attribute] = {}
@@ -53,7 +52,8 @@ def find_best_attribute(examples, ignore_attributes):
 
   #entropy_dict should be filled now
   res = None
-  minimum = float('inf')  
+  minimum = float('inf')
+  # print(entropy_dict, examples[0].keys(), len(ignore_attributes))
   for attribute in entropy_dict:
     single_attribute_values_ratio_dict = {}
     current_attribute_entropy = 0
@@ -77,64 +77,58 @@ def find_best_attribute(examples, ignore_attributes):
   return [res, minimum, entropy_dict[res]]
 
 
-def ID3(examples, default):
+def ID3(examples, default, ignore_attributes=[]):
   '''
   Takes in an array of examples, and returns a tree (an instance of Node) 
   trained on the examples.  Each example is a dictionary of attribute:value pairs,
   and the target class variable is a special attribute with the name "Class".
   Any missing attributes are denoted with a value of "?"
   '''
-  
   currNode = Node()
   currNode.label = default
-  entropy_dict_res = {}
-  
-  # shouldnt hit this case
+
+  # Shouldn't hit this case
   if not examples:
-    return currNode
-  
-  # check if every class in examples is the SAME
+      return currNode
+
+  # Check if every class in examples is the SAME
   occurencePerClass = {}
   for ex in examples:
-    if ex["Class"] not in occurencePerClass:
-      occurencePerClass[ex["Class"]] = 0
-    occurencePerClass[ex["Class"]] += 1
-  
+      if ex["Class"] not in occurencePerClass:
+          occurencePerClass[ex["Class"]] = 0
+      occurencePerClass[ex["Class"]] += 1
+
   mostCommon = sorted(list(occurencePerClass.keys()))[-1]
   currNode.label = mostCommon
 
-  if len(occurencePerClass) == 1:
-    return currNode
-  
-  parent_entropy = entropy(examples)
-  best_attribute, child_entropy, entropy_dict_res = find_best_attribute(examples, currNode.ignore_attributes)
-  currNode.ignore_attributes.append(best_attribute)
+  if not examples or len(ignore_attributes) == len(examples[0].keys())-1 or len(occurencePerClass) == 1:
+      return currNode
 
+  # if ignore_attributes is None -- on the first case just set it to []
+  if ignore_attributes is None:
+      ignore_attributes = []
+
+  parent_entropy = entropy(examples)
+  best_attribute, child_entropy, entropy_dict_res = find_best_attribute(examples, ignore_attributes)
+  
+  # Create a new list for ignore_attributes to pass to recursive calls
+  new_ignore_attributes = list(ignore_attributes)
+  new_ignore_attributes.append(best_attribute)
+  
   currNode.splitting_attribute = best_attribute
 
-  #do this for all children, remove from examples the rows with splitting attribute = best attribute
-  #will need to loop for this, and recursive call each time
-  #entropy_dict_res should be equal to {Thai : dict, Mexican : dict, Italian : dict}
   for single_attribute_value in entropy_dict_res:
-    #single_attribute_value should be equal to Thai:{Yes: 3, No: 4}
-    currNode.children[single_attribute_value] = Node()
-    #trying to say if no one ever had thai food, this may be wrong
-    if len(entropy_dict_res[single_attribute_value]) == 0:
-      currNode.children[single_attribute_value].label = mostCommon #maybe most common
-    else:
-      ######LOOK AT THIS######
+      currNode.children[single_attribute_value] = Node()
       new_data_set = [example for example in examples if example[best_attribute] == single_attribute_value]
       if len(new_data_set) == 0:
-        currNode.children[single_attribute_value].label = mostCommon
+          currNode.children[single_attribute_value].label = mostCommon
       else:
-        currNode.children[single_attribute_value] = ID3(new_data_set, default)
-        currNode.children[single_attribute_value].ignore_attributes = currNode.ignore_attributes
-
-    #if no one has the single_attribute_value then make Nodes label mostCommon
-    #else call Node = ID3(D/D_a, default)
+          # update ignore_attributes list to recursive calls
+          currNode.children[single_attribute_value] = ID3(new_data_set, default, new_ignore_attributes)
 
   return currNode
-  
+
+
 
 def prune(node, examples):
   '''
