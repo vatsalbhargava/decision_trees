@@ -1,25 +1,6 @@
 from node import Node
 import math
 
-def entropy(examples):
-  if not examples:
-    return 0
-  
-  count = {}
-  res = 0
-  tc = 0
-  for ex in examples:
-    if ex["Class"] not in count:
-      count[ex["Class"]] = 0
-
-    tc += 1
-    count[ex["Class"]] += 1
-    
-  for val in count:
-    res += -1*((count[val]/tc)*math.log(count[val]/tc,2))
-    
-  return res
-
 def find_best_attribute(examples, ignore_attributes):
   #dict = {all attributes : {all attribute outcomes : {all class outcomes : count}}}
   entropy_dict = {}
@@ -108,7 +89,6 @@ def ID3(examples, default, ignore_attributes=[]):
   if ignore_attributes is None:
       ignore_attributes = []
 
-  parent_entropy = entropy(examples)
   best_attribute, child_entropy, entropy_dict_res = find_best_attribute(examples, ignore_attributes)
   
   # Create a new list for ignore_attributes to pass to recursive calls
